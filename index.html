@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Social App · Firebase Auth</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 25% 25%, #1e293b 0, #0f172a 40%),
+                  radial-gradient(circle at 80% 0%, #0ea5e9 0, #0f172a 32%),
+                  #0f172a;
+    }
+    .card {
+      width: min(880px, 94vw);
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(12px);
+    }
+    h1, h2, h3 {
+      margin: 0 0 12px;
+    }
+    button, input, textarea {
+      font: inherit;
+    }
+    button {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid #22d3ee;
+      background: linear-gradient(120deg, #22d3ee, #0ea5e9);
+      color: #0b1222;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 30px rgba(14, 165, 233, 0.35);
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .muted {
+      color: #94a3b8;
+      margin-bottom: 16px;
+    }
+    .field {
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: #cbd5e1;
+      font-size: 14px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #1f2937;
+      background: #0b1222;
+      color: #e2e8f0;
+    }
+    .stack {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+    }
+    .pill {
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: rgba(14, 165, 233, 0.12);
+      border: 1px solid rgba(14, 165, 233, 0.4);
+      color: #7dd3fc;
+      font-weight: 700;
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+      border-bottom: 1px solid #1f2937;
+      padding-bottom: 6px;
+    }
+    .tab {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      background: transparent;
+      width: auto;
+      color: #e2e8f0;
+      transition: all 140ms ease;
+    }
+    .tab.active {
+      border-color: #22d3ee;
+      background: rgba(14, 165, 233, 0.12);
+      color: #7dd3fc;
+    }
+    .hidden {
+      display: none;
+    }
+    .feed {
+      margin-top: 16px;
+      display: grid;
+      gap: 12px;
+    }
+    .post {
+      border: 1px solid #1f2937;
+      border-radius: 14px;
+      padding: 14px;
+      background: rgba(12, 20, 36, 0.9);
+    }
+    .post-meta {
+      color: #94a3b8;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .chip {
+      border-radius: 10px;
+      padding: 6px 10px;
+      background: rgba(148, 163, 184, 0.15);
+      border: 1px solid #1f2937;
+      font-size: 13px;
+    }
+    .comment-box {
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+    .comment {
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.02);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .comment small {
+      color: #94a3b8;
+      display: block;
+    }
+    .inline-btn {
+      width: auto;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="login-card">
+    <h1>Welcome back</h1>
+    <p class="muted">Sign in to continue to your social home.</p>
+    <button id="login-btn">Continue with Google</button>
+  </div>
+
+  <div class="card hidden" id="home-card">
+    <div class="stack" style="margin-top:0">
+      <div>
+        <h2 id="user-name">Your profile</h2>
+        <p class="muted" id="user-email"></p>
+      </div>
+      <button id="logout-btn" style="width:auto;padding:10px 14px;">Logout</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="feed">Feed</button>
+      <button class="tab" data-tab="profile">Profile</button>
+    </div>
+
+    <section id="feed-tab" class="feed">
+      <form id="post-form" autocomplete="off">
+        <div class="field">
+          <label for="post-text">Share an update</label>
+          <textarea id="post-text" rows="3" placeholder="What's on your mind?"></textarea>
+        </div>
+        <button type="submit">Post</button>
+      </form>
+      <div id="posts-list"></div>
+    </section>
+
+    <section id="profile-tab" class="hidden">
+      <div class="stack">
+        <div class="pill" id="followers-pill">0 Followers</div>
+        <div class="pill" id="following-pill">0 Following</div>
+      </div>
+
+      <form id="profile-form" autocomplete="off">
+        <h3 style="margin-top:16px;">Profile</h3>
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" name="username" placeholder="e.g. nebula.dev" required />
+        </div>
+        <div class="field">
+          <label for="bio">Bio</label>
+          <textarea id="bio" name="bio" rows="3" placeholder="Tell the world who you are"></textarea>
+        </div>
+        <button id="save-btn" type="submit">Save profile</button>
+      </form>
+      <p class="muted" id="status" style="margin-top:12px;"></p>
+    </section>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    // TODO: Replace with your Firebase project configuration
+    const firebaseConfig = {
+    apiKey: "AIzaSyDuw6d6weWepJ-HCZZJZ5JTTOz_gFAll2A",
+    authDomain: "career-guidance-16698.firebaseapp.com",
+    projectId: "career-guidance-16698",
+    storageBucket: "career-guidance-16698.firebasestorage.app",
+    messagingSenderId: "884719701758",
+    appId: "1:884719701758:web:590e6491b06bfc57585faf"
+  };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const loginCard = document.getElementById("login-card");
+    const homeCard = document.getElementById("home-card");
+    const loginBtn = document.getElementById("login-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+    const userName = document.getElementById("user-name");
+    const userEmail = document.getElementById("user-email");
+    const followersPill = document.getElementById("followers-pill");
+    const followingPill = document.getElementById("following-pill");
+    const profileForm = document.getElementById("profile-form");
+    const usernameInput = document.getElementById("username");
+    const bioInput = document.getElementById("bio");
+    const saveBtn = document.getElementById("save-btn");
+    const statusEl = document.getElementById("status");
+    const postForm = document.getElementById("post-form");
+    const postText = document.getElementById("post-text");
+    const postsList = document.getElementById("posts-list");
+    const tabs = document.querySelectorAll(".tab");
+    const feedTab = document.getElementById("feed-tab");
+    const profileTab = document.getElementById("profile-tab");
+
+    const provider = new firebase.auth.GoogleAuthProvider();
+    let unsubscribePosts = null;
+
+    loginBtn.addEventListener("click", async () => {
+      loginBtn.disabled = true;
+      try {
+        await auth.signInWithPopup(provider);
+      } catch (err) {
+        alert("Login failed: " + err.message);
+      } finally {
+        loginBtn.disabled = false;
+      }
+    });
+
+    logoutBtn.addEventListener("click", () => auth.signOut());
+
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        loginCard.classList.remove("hidden");
+        homeCard.classList.add("hidden");
+        postsList.innerHTML = "";
+        if (unsubscribePosts) unsubscribePosts();
+        return;
+      }
+      loginCard.classList.add("hidden");
+      homeCard.classList.remove("hidden");
+      userName.textContent = user.displayName || "Your profile";
+      userEmail.textContent = user.email || "";
+      await loadProfile(user.uid, user.displayName || "");
+      subscribeToPosts();
+    });
+
+    async function loadProfile(uid, fallbackName) {
+      setStatus("Loading profile…");
+      const ref = db.collection("users").doc(uid);
+      const snap = await ref.get();
+
+      if (!snap.exists) {
+        // Seed a minimal profile so the UI can render counts.
+        await ref.set({
+          username: fallbackName || "New User",
+          bio: "",
+          followers: 0,
+          following: 0,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      const data = (await ref.get()).data();
+      usernameInput.value = data.username || "";
+      bioInput.value = data.bio || "";
+      followersPill.textContent = `${data.followers || 0} Followers`;
+      followingPill.textContent = `${data.following || 0} Following`;
+      setStatus("Profile ready");
+    }
+
+    profileForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const user = auth.currentUser;
+      if (!user) return;
+
+      saveBtn.disabled = true;
+      setStatus("Saving…");
+
+      try {
+        const ref = db.collection("users").doc(user.uid);
+        await ref.set(
+          {
+            username: usernameInput.value.trim() || user.displayName || "User",
+            bio: bioInput.value.trim(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        setStatus("Saved");
+      } catch (err) {
+        setStatus("Error: " + err.message);
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    function setStatus(text) {
+      statusEl.textContent = text;
+    }
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        tabs.forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        const target = tab.dataset.tab;
+        feedTab.classList.toggle("hidden", target !== "feed");
+        profileTab.classList.toggle("hidden", target !== "profile");
+      });
+    });
+
+    postForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const user = auth.currentUser;
+      if (!user) return;
+      const text = postText.value.trim();
+      if (!text) return;
+      postText.value = "";
+      await db.collection("posts").add({
+        authorId: user.uid,
+        authorName: usernameInput.value || user.displayName || "User",
+        text,
+        likes: [],
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    });
+
+    function subscribeToPosts() {
+      if (unsubscribePosts) unsubscribePosts();
+      unsubscribePosts = db
+        .collection("posts")
+        .orderBy("createdAt", "desc")
+        .limit(30)
+        .onSnapshot((snap) => {
+          postsList.innerHTML = "";
+          snap.forEach((doc) => renderPost(doc.id, doc.data()));
+        });
+    }
+
+    function renderPost(id, data) {
+      const user = auth.currentUser;
+      const wrap = document.createElement("div");
+      wrap.className = "post";
+      const isLiked = user && Array.isArray(data.likes) && data.likes.includes(user.uid);
+      const likesCount = Array.isArray(data.likes) ? data.likes.length : 0;
+
+      wrap.innerHTML = `
+        <div class="post-meta">${data.authorName || "User"} · ${data.createdAt?.toDate ? data.createdAt.toDate().toLocaleString() : "just now"}</div>
+        <div>${(data.text || "").replace(/\n/g, "<br>")}</div>
+        <div class="actions">
+          <button class="inline-btn like-btn">${isLiked ? "Unlike" : "Like"} (${likesCount})</button>
+          <span class="chip comments-count" data-count="0">0 comments</span>
+        </div>
+        <div class="comment-box">
+          <form class="comment-form">
+            <div class="field" style="margin-bottom:8px">
+              <input name="comment" placeholder="Add a comment" />
+            </div>
+            <button class="inline-btn" type="submit">Comment</button>
+          </form>
+          <div class="comments"></div>
+        </div>
+      `;
+
+      const likeBtn = wrap.querySelector(".like-btn");
+      likeBtn.addEventListener("click", () => toggleLike(id, isLiked));
+
+      const commentsEl = wrap.querySelector(".comments");
+      const commentsCount = wrap.querySelector(".comments-count");
+      const commentForm = wrap.querySelector(".comment-form");
+      commentForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const input = commentForm.querySelector("input[name='comment']");
+        const text = input.value.trim();
+        if (!text || !auth.currentUser) return;
+        input.value = "";
+        db.collection("posts").doc(id).collection("comments").add({
+          userId: auth.currentUser.uid,
+          userName: usernameInput.value || auth.currentUser.displayName || "User",
+          text,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+
+      db.collection("posts")
+        .doc(id)
+        .collection("comments")
+        .orderBy("createdAt", "asc")
+        .onSnapshot((snap) => {
+          commentsEl.innerHTML = "";
+          commentsCount.textContent = `${snap.size} comments`;
+          snap.forEach((c) => {
+            const cData = c.data();
+            const row = document.createElement("div");
+            row.className = "comment";
+            row.innerHTML = `
+              <div>
+                <strong>${cData.userName || "User"}</strong>
+                <small>${cData.createdAt?.toDate ? cData.createdAt.toDate().toLocaleString() : ""}</small>
+                <div>${(cData.text || "").replace(/\n/g, "<br>")}</div>
+              </div>
+              ${
+                auth.currentUser && auth.currentUser.uid === cData.userId
+                  ? '<button class="inline-btn delete-comment">Delete</button>'
+                  : ""
+              }
+            `;
+            const delBtn = row.querySelector(".delete-comment");
+            if (delBtn) {
+              delBtn.addEventListener("click", async () => {
+                await db.collection("posts").doc(id).collection("comments").doc(c.id).delete();
+              });
+            }
+            commentsEl.appendChild(row);
+          });
+        });
+
+      postsList.appendChild(wrap);
+    }
+
+    async function toggleLike(postId, isLiked) {
+      const user = auth.currentUser;
+      if (!user) return;
+      const ref = db.collection("posts").doc(postId);
+      await ref.update({
+        likes: isLiked
+          ? firebase.firestore.FieldValue.arrayRemove(user.uid)
+          : firebase.firestore.FieldValue.arrayUnion(user.uid),
+      });
+    }
+  </script>
+</body>
+</html>
+
